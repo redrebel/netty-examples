@@ -1,3 +1,5 @@
+package core;
+
 import com.google.gson.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,7 +16,7 @@ public abstract class ApiRequestTemplate implements ApiRequest {
     protected JsonObject apiResult;
 
     public ApiRequestTemplate(Map<String, String> reqData) {
-        this.logger = LogManager.getLogger(this.getClass().getName());
+        this.logger = LogManager.getLogger(this.getClass());
         this.apiResult = new JsonObject();
         this.reqData = reqData;
 

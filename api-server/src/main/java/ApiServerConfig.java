@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 
 @Configuration
 @ImportResource("classpath:spring/hsqlApplicationContext.xml")
+@ComponentScan("com, core, service")
 @PropertySource("classpath:api-server.properties")
 public class ApiServerConfig {
     @Value("${boss.thread.count}")

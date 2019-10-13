@@ -1,4 +1,7 @@
+package com;
+
 import com.google.gson.JsonObject;
+import core.ApiRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
@@ -6,6 +9,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http.multipart.*;
+import io.netty.util.CharsetUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,7 +19,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static io.netty.handler.codec.http.HttpResponseStatus.CONTINUE;
+import static io.netty.handler.codec.http.HttpHeaderNames.*;
+import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class ApiRequestParser extends SimpleChannelInboundHandler<FullHttpMessage> {
@@ -38,14 +43,20 @@ public class ApiRequestParser extends SimpleChannelInboundHandler<FullHttpMessag
         usingHeader.add("email");
     }
 
-    protected void channelRead0(ChannelHandlerContext ctx, FullHttpMessage msg) throws Exception { // 1
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx){
+        logger.info("요청 처리 완료");
+        ctx.flush();
+    }
+
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, FullHttpMessage msg){ // 1
         // Request header 처리
         if (msg instanceof HttpRequest) {   // 2
             this.request = (HttpRequest) msg;   // 3
 
             if(HttpHeaders.is100ContinueExpected(request)){
-//                send100Continue(ctx);
-                ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE));
+                send100Continue(ctx);
             }
 
             HttpHeaders headers = request.headers();    //4
@@ -93,11 +104,10 @@ public class ApiRequestParser extends SimpleChannelInboundHandler<FullHttpMessag
         }
     }
 
-    @Override
-    public void channelReadComplete(ChannelHandlerContext ctx){
-        logger.info("요청 처리 완료");
-        ctx.flush();
+    private void reset() {
+        request = null;
     }
+
 
     private void readPostData() {
         try {
@@ -122,5 +132,42 @@ public class ApiRequestParser extends SimpleChannelInboundHandler<FullHttpMessag
                 decoder.destroy();
             }
         }
+    }
+
+    private boolean writeResponse(HttpObject currentObj, ChannelHandlerContext ctx) {
+        // Decide whether to close the connection or not.
+        boolean keepAlive = HttpHeaders.isKeepAlive(request);
+        // Build the response object.
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1,
+                currentObj.getDecoderResult().isSuccess() ? OK : BAD_REQUEST, Unpooled.copiedBuffer(
+                apiResult.toString(), CharsetUtil.UTF_8));
+
+        response.headers().set(CONTENT_TYPE, "application/json; charset=UTF-8");
+
+        if (keepAlive) {
+            // Add 'Content-Length' header only for a keep-alive connection.
+            response.headers().set(CONTENT_LENGTH, response.content().readableBytes());
+            // Add keep alive header as per:
+            // -
+            // http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
+            response.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+        }
+
+        // Write the response.
+        ctx.write(response);
+
+        return keepAlive;
+    }
+
+
+    private static void send100Continue(ChannelHandlerContext ctx){
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE);
+        ctx.write(response);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        logger.error(cause);
+        ctx.close();
     }
 }

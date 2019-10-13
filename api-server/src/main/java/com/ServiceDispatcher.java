@@ -1,3 +1,6 @@
+package com;
+
+import core.ApiRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,17 +11,17 @@ import java.util.Map;
 
 @Component
 public class ServiceDispatcher {
-    private static ApplicationContext springContext;
+    private static ApplicationContext springContext;    // 1
 
     @Autowired
     public void init(ApplicationContext springContext){
-        ServiceDispatcher.springContext = springContext;
+        ServiceDispatcher.springContext = springContext;    // 2
     }
 
     protected Logger logger = LogManager.getLogger(this.getClass());
 
-    public static ApiRequest dispatch(Map<String, String> requestMap) {
-        String serviceUri = requestMap.get("REQUEST URI");
+    public static ApiRequest dispatch(Map<String, String> requestMap) { // 3
+        String serviceUri = requestMap.get("REQUEST_URI");   //4
         String beanName = null;
 
         if(serviceUri == null){

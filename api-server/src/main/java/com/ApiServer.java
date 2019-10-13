@@ -1,3 +1,5 @@
+package com;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -9,11 +11,13 @@ import io.netty.handler.logging.LoggingHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.net.InetSocketAddress;
 
 @Component
-public class ApiServer {
+public final class ApiServer {
     @Autowired
     @Qualifier("tcpSocketAddress")
     private InetSocketAddress address;
